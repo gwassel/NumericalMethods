@@ -50,7 +50,7 @@ public:
             initialConditions[1] = 0.0;
             initConds = initialConditions;
             first = 0.0;
-            last = 3.0;
+            last = 1.0;
             return f5;
         }
     }

@@ -252,3 +252,107 @@ int DifferentialEquation::solveWithPredictorCorrector(int methodOrder, int numbe
 
     return 0;
 }
+
+int DifferentialEquation::solveWithRungeKutta2Order()
+{
+    double *varX1 = new double[equationsCount];
+    double *varX2 = new double[equationsCount];
+    double *tmpX = new double[equationsCount];
+
+    double *k1 = new double[equationsCount];
+    double *k2 = new double[equationsCount];
+
+    double T;
+    double norm;
+    double badTau;
+    double t = first;
+    double tau = tauStart;
+
+    tOutPoints.clear();
+    xOutMatrix.clear();
+    tOutPoints.push_back(first);
+    xOutMatrix.push_back(vec(equationsCount));
+
+    for (int i = 0; i < equationsCount; i++)
+    {
+        xOutMatrix[xOutMatrix.size() - 1].p[i] = initialConditions[i];
+        varX1[i] = varX2[i] = initialConditions[i];
+    }
+
+    while (t < last)
+    {
+
+        T = t;
+        norm = -1.0;
+        badTau = (last - first);
+        while (true)
+        {
+            t = T;
+
+            stepWithRungeKutta2Order(k1, k2, varX1, tmpX, tau, t);
+
+            t = T;
+
+            stepWithRungeKutta2Order(k1, k2, varX2, tmpX, tau / 2.0, t);
+            stepWithRungeKutta2Order(k1, k2, varX2, tmpX, tau / 2.0, t);
+
+            if (calculateError(varX1, varX2) < 10-2 || fabs(calculateError(varX1, varX2) - norm) < 1e-8)
+            {
+                tOutPoints.push_back(t);
+                xOutMatrix.push_back(vec(equationsCount));
+                for (int i = 0; i < equationsCount; i++)
+                    xOutMatrix[xOutMatrix.size() - 1].p[i] = varX1[i];
+                t = T + tau;
+
+                if (calculateError(varX1, varX2) < eps / 10.0 && tau * 2 < badTau / 1000.0)
+                tau *= 2;
+
+                break;
+            }
+            else
+            {
+                xOutMatrix.clear();
+                tOutPoints.clear();
+                tOutPoints.push_back(first);
+                xOutMatrix.push_back(vec(equationsCount));
+
+                for (int i = 0; i < equationsCount; i++)
+                {
+                    xOutMatrix[xOutMatrix.size() - 1].p[i] = initialConditions[i];
+                    varX1[i] = varX2[i] = initialConditions[i];
+                }
+                badTau = tau;
+                tauStart /= 10.0;
+                tau = tauStart;
+                t = first;
+                cout << tau << endl;
+                cin.get();
+                break;
+            }
+            norm = calculateError(varX1, varX2);
+        };
+
+        if (tauStart < 1e-20)
+        {
+            cout << "fatal error" << endl;
+            return 4000;
+        }
+    }
+    outputFile();
+    return 0;
+}
+
+void DifferentialEquation::stepWithRungeKutta2Order(double *k1, double *k2, double *varX, double *tmpX, double tau, double &t)
+{
+    //k1
+    f(t, varX, k1);
+    for (int j = 0; j < equationsCount; j++)
+        tmpX[j] = varX[j] + k1[j] * tau * 0.5;
+
+    //k2
+    t += 0.5 * tau;
+    f(t, tmpX, k2);
+
+    for (int j = 0; j < equationsCount; j++)
+        varX[j] += tau * k2[j];
+}

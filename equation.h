@@ -30,10 +30,12 @@ private:
 
     double calculateError(double *y1, double* y2);
     void stepWithRungeKutta(double* k1,double* k2,double* k3,double* k4,double *varX, double *tmpX, double tau, double& t);
+    void stepWithRungeKutta2Order(double* k1,double* k2,double *varX, double *tmpX, double tau, double& t);
 
 public:
     DifferentialEquation(RightPart rp, int systemNum);
     int solveWithRungeKutta(bool flag = false, int count = 4);
+    int solveWithRungeKutta2Order();
     int solveWithAdams(int methodOrder = 4, int numberOfPoints = 1000);
     int solveWithPredictorCorrector(int methodOrder = 4, int numberOfPoints = 1000);
     void outputFile();
