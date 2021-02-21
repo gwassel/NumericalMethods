@@ -54,6 +54,7 @@ int DifferentialEquation::solveWithRungeKutta(bool flag, int count)
 
                 if (readyPoints == count && flag == true)
                 {
+                    stepAfterRK = tau;
                     return 0;
                 }
 
@@ -155,6 +156,38 @@ void DifferentialEquation::stepWithRungeKutta(double *k1, double *k2, double *k3
     }
 }
 
+int DifferentialEquation::solveWithAdams(int methodOrder, int numberOfPoints)
+{
+    solveWithRungeKutta(true);
+
+    double t = tOutPoints[tOutPoints.size() - 1];
+    double step = fabs(last - t) / numberOfPoints;
+    //double step = stepAfterRK;
+    //int pnum = (int)(fabs(last - t) / step);
+    double coef = step / 24.0;
+
+    double **tmpf = new double *[methodOrder];
+    for (int i = 0; i < methodOrder; i++)
+    {
+        tmpf[i] = new double[equationsCount];
+    }
+
+    for (int i = 0; i < numberOfPoints; i++)
+    {
+        t = t + step;
+        tOutPoints.push_back(t);
+        xOutMatrix.push_back(vec(equationsCount));
+
+        for (int i1 = 1; i1 <= methodOrder; i1++)
+            f(tOutPoints[tOutPoints.size() - 1 - i1] /*t - step * i1*/, xOutMatrix[xOutMatrix.size() - i1 - 1].p, tmpf[i1 - 1]);
+
+        for (int j = 0; j < equationsCount; j++)
+            xOutMatrix[xOutMatrix.size() - 1].p[j] = xOutMatrix[xOutMatrix.size() - 2].p[j] + coef * (55.0 * tmpf[0][j] - 59.0 * tmpf[1][j] + 37.0 * tmpf[2][j] - 9.0 * tmpf[3][j]);
+    };
+    outputFile();
+    return 0;
+}
+
 void DifferentialEquation::outputFile()
 {
     ofstream fOut;
@@ -178,7 +211,7 @@ void DifferentialEquation::outputFile()
     fOut.close();
 }
 
-int DifferentialEquation::solveWithAdams(int methodOrder, int numberOfPoints)
+int DifferentialEquation::solveWithPredictorCorrector(int methodOrder, int numberOfPoints)
 {
     solveWithRungeKutta(true);
 
@@ -201,11 +234,17 @@ int DifferentialEquation::solveWithAdams(int methodOrder, int numberOfPoints)
         xOutMatrix.push_back(vec(equationsCount));
 
         for (int i1 = 1; i1 <= methodOrder; i1++)
-            f(t - step * i1, xOutMatrix[xOutMatrix.size() - i1 - 1].p, tmpf[i1 - 1]);
+            f(tOutPoints[tOutPoints.size() - 1 - i1] /*t - step * i1*/, xOutMatrix[xOutMatrix.size() - i1 - 1].p, tmpf[i1 - 1]);
 
         for (int j = 0; j < equationsCount; j++)
             xOutMatrix[xOutMatrix.size() - 1].p[j] = xOutMatrix[xOutMatrix.size() - 2].p[j] + coef * (55.0 * tmpf[0][j] - 59.0 * tmpf[1][j] + 37.0 * tmpf[2][j] - 9.0 * tmpf[3][j]);
+
+        f(tOutPoints[tOutPoints.size() - 1], xOutMatrix[xOutMatrix.size() - 1].p, tmpX);
+
+        for (int j = 0; j < equationsCount; j++)
+            xOutMatrix[xOutMatrix.size() - 1].p[j] = xOutMatrix[xOutMatrix.size() - 2].p[j] + coef * (9.0 * tmpX[j] + 19.0 * tmpf[0][j] - 5.0 * tmpf[1][j] + tmpf[2][j]);
     };
     outputFile();
+
     return 0;
 }

@@ -26,6 +26,7 @@ private:
     vector<double> tOutPoints;
     vector<vec> xOutMatrix;
     double eps = 1e-6;
+    double stepAfterRK;
 
     double calculateError(double *y1, double* y2);
     void stepWithRungeKutta(double* k1,double* k2,double* k3,double* k4,double *varX, double *tmpX, double tau, double& t);
@@ -33,7 +34,8 @@ private:
 public:
     DifferentialEquation(RightPart rp, int systemNum);
     int solveWithRungeKutta(bool flag = false, int count = 4);
-    int solveWithAdams(int methodOrder = 4, int numberOfPoints = 1000);
+    int solveWithAdams(int methodOrder = 4, int numberOfPoints = 200);
+    int solveWithPredictorCorrector(int methodOrder = 4, int numberOfPoints = 200);
     void outputFile();
     void printResult();
 };
