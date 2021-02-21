@@ -6,6 +6,7 @@ int main()
      RightPart rp;
      int systemNum = 2;
      DifferentialEquation eq1(rp, systemNum);
+     //rk
      //eq1.solveWithRungeKutta();
      eq1.solveWithAdams();
      
