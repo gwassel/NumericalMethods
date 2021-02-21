@@ -1,6 +1,7 @@
 #include "equation.h"
 int DifferentialEquation::solveWithRungeKutta(bool flag, int count)
 {
+    //delete memory
     double *varX1 = new double[equationsCount];
     double *varX2 = new double[equationsCount];
     double *tmpX = new double[equationsCount];
@@ -177,9 +178,34 @@ void DifferentialEquation::outputFile()
     fOut.close();
 }
 
-
-int DifferentialEquation::solveWithAdams(){
+int DifferentialEquation::solveWithAdams(int methodOrder, int numberOfPoints)
+{
     solveWithRungeKutta(true);
-    cout << xOutMatrix.size();
+
+    double t = tOutPoints[tOutPoints.size() - 1];
+    double step = fabs(last - t) / numberOfPoints;
+    double coef = step / 24.0;
+
+    double *tmpX = new double[equationsCount];
+
+    double **tmpf = new double *[methodOrder];
+    for (int i = 0; i < methodOrder; i++)
+    {
+        tmpf[i] = new double[equationsCount];
+    }
+
+    for (int i = 0; i < numberOfPoints; i++)
+    {
+        t = t + step;
+        tOutPoints.push_back(t);
+        xOutMatrix.push_back(vec(equationsCount));
+
+        for (int i1 = 1; i1 <= methodOrder; i1++)
+            f(t - step * i1, xOutMatrix[xOutMatrix.size() - i1 - 1].p, tmpf[i1 - 1]);
+
+        for (int j = 0; j < equationsCount; j++)
+            xOutMatrix[xOutMatrix.size() - 1].p[j] = xOutMatrix[xOutMatrix.size() - 2].p[j] + coef * (55.0 * tmpf[0][j] - 59.0 * tmpf[1][j] + 37.0 * tmpf[2][j] - 9.0 * tmpf[3][j]);
+    };
+    outputFile();
     return 0;
 }

@@ -33,7 +33,7 @@ private:
 public:
     DifferentialEquation(RightPart rp, int systemNum);
     int solveWithRungeKutta(bool flag = false, int count = 4);
-    int solveWithAdams();
+    int solveWithAdams(int methodOrder = 4, int numberOfPoints = 1000);
     void outputFile();
     void printResult();
 };
