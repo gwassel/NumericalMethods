@@ -215,6 +215,7 @@ void DifferentialEquation::outputFile()
     fOut.close();
 }
 
+
 int DifferentialEquation::solveWithPredictorCorrector(int methodOrder, int numberOfPoints)
 {
     solveWithRungeKutta(true);

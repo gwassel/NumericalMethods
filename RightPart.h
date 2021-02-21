@@ -88,8 +88,8 @@ private:
 
     static void f5(double t, double *x, double *res)
     {
-        double k = 1000.0;
-        double m = 0.5;
+        double k = 20.0;
+        double m = 0.3;
         res[0] = x[1];
         res[1] = -(k / m) * x[0];
     }
