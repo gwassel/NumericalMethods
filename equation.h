@@ -21,7 +21,7 @@ private:
     int equationsCount;
     double first;
     double last;
-    int pointsNumber = 10;
+    int pointsNumber = 1000;
     double tauStart;
     vector<double> tOutPoints;
     vector<vec> xOutMatrix;
@@ -34,8 +34,8 @@ private:
 public:
     DifferentialEquation(RightPart rp, int systemNum);
     int solveWithRungeKutta(bool flag = false, int count = 4);
-    int solveWithAdams(int methodOrder = 4, int numberOfPoints = 200);
-    int solveWithPredictorCorrector(int methodOrder = 4, int numberOfPoints = 200);
+    int solveWithAdams(int methodOrder = 4, int numberOfPoints = 1000);
+    int solveWithPredictorCorrector(int methodOrder = 4, int numberOfPoints = 1000);
     void outputFile();
     void printResult();
 };

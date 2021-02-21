@@ -13,6 +13,7 @@ int DifferentialEquation::solveWithRungeKutta(bool flag, int count)
 
     double T;
     double norm;
+    double badTau;
     double t = first;
     double tau = tauStart;
     int readyPoints = 1;
@@ -32,8 +33,10 @@ int DifferentialEquation::solveWithRungeKutta(bool flag, int count)
     {
         T = t;
         norm = -1.0;
+        badTau = (last - first);
         while (true)
         {
+            cout << tau << " " << t << " " << endl;
             t = T;
 
             stepWithRungeKutta(k1, k2, k3, k4, varX1, tmpX, tau, t);
@@ -58,7 +61,7 @@ int DifferentialEquation::solveWithRungeKutta(bool flag, int count)
                     return 0;
                 }
 
-                if (calculateError(varX1, varX2) < eps / 100.0)
+                if (calculateError(varX1, varX2) < eps / 1000.0 && tau * 2 < badTau / 100.0)
                     tau *= 2;
 
                 break;
@@ -76,7 +79,7 @@ int DifferentialEquation::solveWithRungeKutta(bool flag, int count)
                     xOutMatrix[xOutMatrix.size() - 1].p[i] = initialConditions[i];
                     varX1[i] = varX2[i] = initialConditions[i];
                 }
-
+                badTau = tau;
                 tauStart /= 10.0;
                 tau = tauStart;
                 t = first;
@@ -87,6 +90,7 @@ int DifferentialEquation::solveWithRungeKutta(bool flag, int count)
 
         if (tauStart < 1e-20)
         {
+            cout << "fatal error" << endl;
             return 4000;
         }
     }
