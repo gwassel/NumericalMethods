@@ -1,6 +1,5 @@
 #include "equation.h"
-
-int DifferentialEquation::solveWithRungeKutta()
+int DifferentialEquation::solveWithRungeKutta(bool flag, int count)
 {
     double *varX1 = new double[equationsCount];
     double *varX2 = new double[equationsCount];
@@ -11,39 +10,29 @@ int DifferentialEquation::solveWithRungeKutta()
     double *k3 = new double[equationsCount];
     double *k4 = new double[equationsCount];
 
-    double tau = (last - first) / (pointsNumber - 1);
-    //double TAU =;
-
-    double t = first;
     double T;
     double norm;
-    int index;
+    double t = first;
+    double tau = tauStart;
+    int readyPoints = 1;
 
-    int trys;
-
+    tOutPoints.clear();
+    xOutMatrix.clear();
     tOutPoints.push_back(first);
     xOutMatrix.push_back(vec(equationsCount));
 
     for (int i = 0; i < equationsCount; i++)
     {
         xOutMatrix[xOutMatrix.size() - 1].p[i] = initialConditions[i];
-        varX1[i] = initialConditions[i];
-        varX2[i] = initialConditions[i];
+        varX1[i] = varX2[i] = initialConditions[i];
     }
 
     while (t < last)
     {
-        //printResult();
-        //tau = TAU;
         T = t;
         norm = -1.0;
-        index = 0;
-        trys = 0;
         while (true)
         {
-            trys++;
-            index++;
-            //cout << "Iteration: " << index++ << " began with t = " << t << " tau = " << tau << endl;
             t = T;
 
             stepWithRungeKutta(k1, k2, k3, k4, varX1, tmpX, tau, t);
@@ -53,64 +42,60 @@ int DifferentialEquation::solveWithRungeKutta()
             stepWithRungeKutta(k1, k2, k3, k4, varX2, tmpX, tau / 2.0, t);
             stepWithRungeKutta(k1, k2, k3, k4, varX2, tmpX, tau / 2.0, t);
 
-            /*cout << "Err: " << index << " " << calculateError(varX1, varX2) << endl;
-            for (int i = 0; i < equationsCount; i++)
+            if (calculateError(varX1, varX2) < eps || fabs(calculateError(varX1, varX2) - norm) < 1e-8)
             {
-                cout << varX1[i] << " ";
-            }
-            cout << endl;
-
-            for (int i = 0; i < equationsCount; i++)
-            {
-                cout << varX2[i] << " ";
-            }
-            cout << endl;
-
-            cout << "F: " << varX1[3] - varX2[3] << endl;*/
-
-            if (calculateError(varX1, varX2) < 1e-6 /*|| fabs(calculateError(varX1, varX2) - norm) < 1e-8*/)
-            {
-                //cout << "Added t = " << t << " tau = " << tau << endl;
-                //cout << "Added " << t << endl;
+                readyPoints++;
                 tOutPoints.push_back(t);
                 xOutMatrix.push_back(vec(equationsCount));
                 for (int i = 0; i < equationsCount; i++)
                     xOutMatrix[xOutMatrix.size() - 1].p[i] = varX1[i];
-                tau *= 2;
+                t = T + tau;
+
+                if (readyPoints == count && flag == true)
+                {
+                    return 0;
+                }
+
+                if (calculateError(varX1, varX2) < eps / 100.0)
+                    tau *= 2;
+
                 break;
             }
             else
             {
-                //cout << "Divided" << endl;
-                tau /= 2.0;
+                readyPoints = 1;
+                xOutMatrix.clear();
+                tOutPoints.clear();
+                tOutPoints.push_back(first);
+                xOutMatrix.push_back(vec(equationsCount));
+
+                for (int i = 0; i < equationsCount; i++)
+                {
+                    xOutMatrix[xOutMatrix.size() - 1].p[i] = initialConditions[i];
+                    varX1[i] = varX2[i] = initialConditions[i];
+                }
+
+                tauStart /= 10.0;
+                tau = tauStart;
+                t = first;
+                break;
             }
-            //cout << "Tau = " << tau << endl;
             norm = calculateError(varX1, varX2);
         };
-        cout << endl;
-        t = T + tau;
+
+        if (tauStart < 1e-20)
+        {
+            return 4000;
+        }
     }
-    printResult();
+    outputFile();
     return 0;
 }
 
 DifferentialEquation::DifferentialEquation(RightPart rp, int systemNum)
 {
     f = rp.getF(systemNum, equationsCount, initialConditions, first, last);
-    //xOutMatrix = new double *[equationsCount];
-    //for (int i = 0; i < pointsNumber; i++)
-    //    xOutMatrix[i] = new double[pointsNumber];
-
-    //for (int j = 0; j < pointsNumber; j++)
-    //    tOutPoints[j] = 0.0;
-
-    //for (int i = 0; i < equationsCount; i++)
-    //{
-    //   for (int j = 0; j < pointsNumber; j++)
-    // {
-    //   xOutMatrix[i][j] = 0.0;
-    //}
-    //}
+    tauStart = (last - first) / (pointsNumber - 1);
 }
 
 void DifferentialEquation::printResult()
@@ -136,19 +121,7 @@ double DifferentialEquation::calculateError(double *y1, double *y2)
 {
     double sum = 0.0;
     for (int i = 0; i < equationsCount; i++)
-    {
         sum += (y2[i] - y1[i]) * ((y2[i] - y1[i]) / (225.0));
-    }
-
-    /*double max = fabs(y1[0] - y2[0]);
-    for (int i = 1; i < equationsCount; i++)
-    {
-        if (max < fabs(y1[i] - y2[i]))
-        {
-            max = fabs(y1[i] - y2[i]);
-        }
-    }*/
-
     return sqrt(sum);
 }
 
@@ -179,4 +152,34 @@ void DifferentialEquation::stepWithRungeKutta(double *k1, double *k2, double *k3
     {
         varX[j] += oneSixth * tau * (k1[j] + k2[j] + k2[j] + k3[j] + k3[j] + k4[j]);
     }
+}
+
+void DifferentialEquation::outputFile()
+{
+    ofstream fOut;
+    string fileName;
+    for (int i = 0; i < equationsCount; i++)
+    {
+        fileName = "res" + to_string(i) + ".txt";
+        fOut.open(fileName, ios::out);
+        for (int j = 0; j < xOutMatrix.size(); j++)
+        {
+            fOut << xOutMatrix[j].p[i] << endl;
+        }
+        fOut.close();
+    }
+    fileName = "t.txt";
+    fOut.open(fileName, ios::out);
+    for (int j = 0; j < xOutMatrix.size(); j++)
+    {
+        fOut << tOutPoints[j] << endl;
+    }
+    fOut.close();
+}
+
+
+int DifferentialEquation::solveWithAdams(){
+    solveWithRungeKutta(true);
+    cout << xOutMatrix.size();
+    return 0;
 }

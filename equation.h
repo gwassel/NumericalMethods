@@ -22,6 +22,7 @@ private:
     double first;
     double last;
     int pointsNumber = 10;
+    double tauStart;
     vector<double> tOutPoints;
     vector<vec> xOutMatrix;
     double eps = 1e-6;
@@ -31,7 +32,8 @@ private:
 
 public:
     DifferentialEquation(RightPart rp, int systemNum);
-    int solveWithRungeKutta();
+    int solveWithRungeKutta(bool flag = false, int count = 4);
+    int solveWithAdams();
     void outputFile();
     void printResult();
 };
