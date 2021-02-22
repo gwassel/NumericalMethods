@@ -1,7 +1,6 @@
 typedef void (*func)(double, double *, double *);
 class RightPart
 {
-
 public:
     func getF(int systemNum, int &equationsCount, double *&initConds, double &first, double &last)
     {

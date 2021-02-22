@@ -37,7 +37,7 @@ int DifferentialEquationSolver::solveWithRungeKutta(bool flag, int count)
             stepWithRungeKutta(k1, k2, k3, k4, varX2, tmpX, tau / 2.0, t);
             stepWithRungeKutta(k1, k2, k3, k4, varX2, tmpX, tau / 2.0, t);
 
-            if (calculateError(varX1, varX2) < eps || fabs(calculateError(varX1, varX2) - norm) < 1e-8)
+            if (calculateErrorNorm(varX1, varX2) < eps || fabs(calculateErrorNorm(varX1, varX2) - norm) < 1e-8)
             {
                 readyPoints++;
                 tOutPoints.push_back(t);
@@ -52,7 +52,7 @@ int DifferentialEquationSolver::solveWithRungeKutta(bool flag, int count)
                     return 0;
                 }
 
-                if (calculateError(varX1, varX2) < eps / 1000.0 && tau * 2 < badTau / 100.0)
+                if (calculateErrorNorm(varX1, varX2) < eps / 1000.0 && tau * 2 < badTau / 100.0)
                     tau *= 2;
 
                 break;
@@ -76,7 +76,7 @@ int DifferentialEquationSolver::solveWithRungeKutta(bool flag, int count)
                 t = first;
                 break;
             }
-            norm = calculateError(varX1, varX2);
+            norm = calculateErrorNorm(varX1, varX2);
         };
 
         if (tauStart < 1e-20)
@@ -144,15 +144,13 @@ void DifferentialEquationSolver::printResult()
     for (int i = 0; i < xOutMatrix.size(); i++)
     {
         for (int j = 0; j < equationsCount; j++)
-        {
             cout << xOutMatrix[i].array[j] << " ";
-        }
         cout << endl;
     }
     cout << endl;
 }
 
-double DifferentialEquationSolver::calculateError(double *y1, double *y2)
+double DifferentialEquationSolver::calculateErrorNorm(double *y1, double *y2)
 {
     double sum = 0.0;
     for (int i = 0; i < equationsCount; i++)
@@ -185,9 +183,7 @@ void DifferentialEquationSolver::stepWithRungeKutta(double *k1, double *k2, doub
     t += HALF * tau;
     f(t, tmpX, k4);
     for (int j = 0; j < equationsCount; j++)
-    {
         varX[j] += ONE_SIXTH * tau * (k1[j] + k2[j] + k2[j] + k3[j] + k3[j] + k4[j]);
-    }
 }
 
 int DifferentialEquationSolver::solveWithAdams(int methodOrder, int numberOfPointsAdams)
@@ -235,7 +231,6 @@ void DifferentialEquationSolver::outputFile()
 
         for (int j = 0; j < xOutMatrix.size(); j++)
             fOut << xOutMatrix[j].array[i] << endl;
-
         fOut.close();
     }
 
@@ -244,7 +239,7 @@ void DifferentialEquationSolver::outputFile()
 
     for (int j = 0; j < xOutMatrix.size(); j++)
         fOut << tOutPoints[j] << endl;
-        
+
     fOut.close();
 }
 
@@ -254,19 +249,26 @@ int DifferentialEquationSolver::solveWithPredictorCorrector(int methodOrder, int
 
     double t = tOutPoints[tOutPoints.size() - 1];
     double step = fabs(last - t) / numberOfPoints;
-    double coef = step / 24.0;
+
+    double C0 = step / 24.0;
+    double C1 = 55.0;
+    double C2 = -59.0;
+    double C3 = 37.0;
+    double C4 = -9.0;
+
+    double Q1 = 9.0;
+    double Q2 = 19.0;
+    double Q3 = -5.0;
 
     double *tmpX = new double[equationsCount];
 
     double **tmpf = new double *[methodOrder];
     for (int i = 0; i < methodOrder; i++)
-    {
         tmpf[i] = new double[equationsCount];
-    }
 
     for (int i = 0; i < numberOfPoints; i++)
     {
-        t = t + step;
+        t += step;
         tOutPoints.push_back(t);
         xOutMatrix.push_back(MyVector(equationsCount));
 
@@ -274,12 +276,12 @@ int DifferentialEquationSolver::solveWithPredictorCorrector(int methodOrder, int
             f(tOutPoints[tOutPoints.size() - 1 - i1] /*t - step * i1*/, xOutMatrix[xOutMatrix.size() - i1 - 1].array, tmpf[i1 - 1]);
 
         for (int j = 0; j < equationsCount; j++)
-            xOutMatrix[xOutMatrix.size() - 1].array[j] = xOutMatrix[xOutMatrix.size() - 2].array[j] + coef * (55.0 * tmpf[0][j] - 59.0 * tmpf[1][j] + 37.0 * tmpf[2][j] - 9.0 * tmpf[3][j]);
+            xOutMatrix[xOutMatrix.size() - 1].array[j] = xOutMatrix[xOutMatrix.size() - 2].array[j] + C0 * ( C1 * tmpf[0][j] + C2 * tmpf[1][j] + C3 * tmpf[2][j] + C4 * tmpf[3][j]);
 
         f(tOutPoints[tOutPoints.size() - 1], xOutMatrix[xOutMatrix.size() - 1].array, tmpX);
 
         for (int j = 0; j < equationsCount; j++)
-            xOutMatrix[xOutMatrix.size() - 1].array[j] = xOutMatrix[xOutMatrix.size() - 2].array[j] + coef * (9.0 * tmpX[j] + 19.0 * tmpf[0][j] - 5.0 * tmpf[1][j] + tmpf[2][j]);
+            xOutMatrix[xOutMatrix.size() - 1].array[j] = xOutMatrix[xOutMatrix.size() - 2].array[j] + C0 * (Q1 * tmpX[j] + Q2 * tmpf[0][j] + Q3 * tmpf[1][j] + tmpf[2][j]);
     };
     outputFile();
 
@@ -329,7 +331,7 @@ int DifferentialEquationSolver::solveWithRungeKutta2Order()
             stepWithRungeKutta2Order(k1, k2, varX2, tmpX, tau / 2.0, t);
             stepWithRungeKutta2Order(k1, k2, varX2, tmpX, tau / 2.0, t);
 
-            if (calculateError(varX1, varX2) < 10 - 2 || fabs(calculateError(varX1, varX2) - norm) < 1e-8)
+            if (calculateErrorNorm(varX1, varX2) < 10 - 2 || fabs(calculateErrorNorm(varX1, varX2) - norm) < 1e-8)
             {
                 tOutPoints.push_back(t);
                 xOutMatrix.push_back(MyVector(equationsCount));
@@ -337,7 +339,7 @@ int DifferentialEquationSolver::solveWithRungeKutta2Order()
                     xOutMatrix[xOutMatrix.size() - 1].array[i] = varX1[i];
                 t = T + tau;
 
-                if (calculateError(varX1, varX2) < eps / 10.0 && tau * 2 < badTau / 1000.0)
+                if (calculateErrorNorm(varX1, varX2) < eps / 10.0 && tau * 2 < badTau / 1000.0)
                     tau *= 2;
 
                 break;
@@ -362,7 +364,7 @@ int DifferentialEquationSolver::solveWithRungeKutta2Order()
                 cin.get();
                 break;
             }
-            norm = calculateError(varX1, varX2);
+            norm = calculateErrorNorm(varX1, varX2);
         };
 
         if (tauStart < 1e-20)

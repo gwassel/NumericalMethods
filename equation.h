@@ -29,7 +29,7 @@ private:
     vector<MyVector> xOutMatrix;
     void (*f)(double, double *, double *);
 
-    double calculateError(double *y1, double *y2);
+    double calculateErrorNorm(double *y1, double *y2);
     void assignInitialValues(double*& varX1,double*& varX2);
     void stepWithRungeKutta2Order(double *k1, double *k2, double *varX, double *tmpX, double tau, double &t);
     void deleteMemory(double*& k1, double*& k2, double*& k3, double*& k4, double*& varX1, double*& varX2, double*& tmpX);

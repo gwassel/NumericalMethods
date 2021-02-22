@@ -6,8 +6,8 @@ int main()
      int systemNum = 4;
      DifferentialEquationSolver eq1(rp, systemNum);
      //eq1.solveWithRungeKutta();
-     eq1.solveWithAdams();
-     //eq1.solveWithPredictorCorrector();
+     //eq1.solveWithAdams();
+     eq1.solveWithPredictorCorrector();
      //eq1.solveWithRungeKutta2Order();
      return 0;
 }
