@@ -8,6 +8,7 @@ int DifferentialEquationSolver::solveWithRungeKutta(bool flag, int count)
 
     double *tmpX;
     double *varX1;
+    double *saveX1 = new double[equationsCount];
     double *varX2;
 
     initializeMemory(k1, k2, k3, k4, varX1, varX2, tmpX);
@@ -24,10 +25,16 @@ int DifferentialEquationSolver::solveWithRungeKutta(bool flag, int count)
     while (t < last)
     {
         T = t;
-        norm = -1.0;
-        badTau = (last - first);
+        for (int i = 0; i < equationsCount; i++)
+            saveX1[i] = varX1[i];
         while (true)
         {
+            for (int i = 0; i < equationsCount; i++)
+            {
+                varX1[i] = saveX1[i];
+                varX2[i] = varX1[i];
+            }
+
             t = T;
 
             stepWithRungeKutta(k1, k2, k3, k4, varX1, tmpX, tau, t);
@@ -37,7 +44,13 @@ int DifferentialEquationSolver::solveWithRungeKutta(bool flag, int count)
             stepWithRungeKutta(k1, k2, k3, k4, varX2, tmpX, tau / 2.0, t);
             stepWithRungeKutta(k1, k2, k3, k4, varX2, tmpX, tau / 2.0, t);
 
-            if (calculateErrorNorm(varX1, varX2) < eps || fabs(calculateErrorNorm(varX1, varX2) - norm) < 1e-8)
+            //cout << calculateErrorNorm(varX1, varX2, 4) << " " << tau << endl;
+            //cout << varX1[0] << " " << varX1[1] << " " << varX1[2] << " " << varX1[3] << endl;
+            //cout << varX2[0] << " " << varX2[1] << " " << varX2[2] << " " << varX2[3] << endl;
+            //cin.get();
+            //cout << tau<< endl;
+
+            if (calculateErrorNorm(varX1, varX2, 4) < eps)
             {
                 readyPoints++;
                 tOutPoints.push_back(t);
@@ -52,39 +65,24 @@ int DifferentialEquationSolver::solveWithRungeKutta(bool flag, int count)
                     return 0;
                 }
 
-                if (calculateErrorNorm(varX1, varX2) < eps / 1000.0 && tau * 2 < badTau / 100.0)
+                if (calculateErrorNorm(varX1, varX2, 4) < eps)
                     tau *= 2;
 
                 break;
             }
             else
             {
-                readyPoints = 1;
-                xOutMatrix.clear();
-                tOutPoints.clear();
-                tOutPoints.push_back(first);
-                xOutMatrix.push_back(MyVector(equationsCount));
-
-                for (int i = 0; i < equationsCount; i++)
-                {
-                    xOutMatrix[xOutMatrix.size() - 1].array[i] = initialConditions[i];
-                    varX1[i] = varX2[i] = initialConditions[i];
-                }
-                badTau = tau;
-                tauStart /= 10.0;
-                tau = tauStart;
-                t = first;
-                break;
+                t = T;
+                tau /= 2.0;
+                //break;
             }
-            norm = calculateErrorNorm(varX1, varX2);
+            if (tau < 1e-20)
+            {
+                deleteMemory(k1, k2, k3, k4, varX1, varX2, tmpX);
+                cout << "fatal error" << endl;
+                return 4000;
+            }
         };
-
-        if (tauStart < 1e-20)
-        {
-            deleteMemory(k1, k2, k3, k4, varX1, varX2, tmpX);
-            cout << "fatal error" << endl;
-            return 4000;
-        }
     }
     deleteMemory(k1, k2, k3, k4, varX1, varX2, tmpX);
     outputFile();
@@ -150,12 +148,42 @@ void DifferentialEquationSolver::printResult()
     cout << endl;
 }
 
-double DifferentialEquationSolver::calculateErrorNorm(double *y1, double *y2)
+double DifferentialEquationSolver::calculateErrorNorm(double *y1, double *y2, int p)
 {
-    double sum = 0.0;
+    /*double sum = 0.0;
     for (int i = 0; i < equationsCount; i++)
         sum += (y2[i] - y1[i]) * ((y2[i] - y1[i]) / (225.0));
-    return sqrt(sum);
+    return sqrt(sum);*/
+
+    int s, u;
+    switch (p)
+    {
+    case 2:
+        s = 3;
+        break;
+    case 4:
+        s = 15;
+        break;
+    }
+
+    double max = fabs(y2[0] - y1[0]);
+    //cout << "max:" << max << endl;
+    u = 0;
+    for (int i = 1; i < equationsCount; i++)
+    {
+        //cout << fabs((y2[i] - y1[i])) << endl;
+        if (max < fabs((y2[i] - y1[i])))
+        {
+            max = fabs((y2[i] - y1[i]));
+            u = i;
+        }
+    }
+    return max / s;
+
+    /*double sum = 0.0;
+    for (int i = 0; i < equationsCount; i++)
+        sum += fabs(y2[i] - y1[i]) / s;
+    return sum;*/
 }
 
 void DifferentialEquationSolver::stepWithRungeKutta(double *k1, double *k2, double *k3, double *k4, double *varX, double *tmpX,
@@ -276,7 +304,7 @@ int DifferentialEquationSolver::solveWithPredictorCorrector(int methodOrder, int
             f(tOutPoints[tOutPoints.size() - 1 - i1] /*t - step * i1*/, xOutMatrix[xOutMatrix.size() - i1 - 1].array, tmpf[i1 - 1]);
 
         for (int j = 0; j < equationsCount; j++)
-            xOutMatrix[xOutMatrix.size() - 1].array[j] = xOutMatrix[xOutMatrix.size() - 2].array[j] + C0 * ( C1 * tmpf[0][j] + C2 * tmpf[1][j] + C3 * tmpf[2][j] + C4 * tmpf[3][j]);
+            xOutMatrix[xOutMatrix.size() - 1].array[j] = xOutMatrix[xOutMatrix.size() - 2].array[j] + C0 * (C1 * tmpf[0][j] + C2 * tmpf[1][j] + C3 * tmpf[2][j] + C4 * tmpf[3][j]);
 
         f(tOutPoints[tOutPoints.size() - 1], xOutMatrix[xOutMatrix.size() - 1].array, tmpX);
 
@@ -291,6 +319,7 @@ int DifferentialEquationSolver::solveWithPredictorCorrector(int methodOrder, int
 int DifferentialEquationSolver::solveWithRungeKutta2Order()
 {
     double *varX1 = new double[equationsCount];
+    double *saveX1 = new double[equationsCount];
     double *varX2 = new double[equationsCount];
     double *tmpX = new double[equationsCount];
 
@@ -298,8 +327,6 @@ int DifferentialEquationSolver::solveWithRungeKutta2Order()
     double *k2 = new double[equationsCount];
 
     double T;
-    double norm;
-    double badTau;
     double t = first;
     double tau = tauStart;
 
@@ -316,12 +343,17 @@ int DifferentialEquationSolver::solveWithRungeKutta2Order()
 
     while (t < last)
     {
-
         T = t;
-        norm = -1.0;
-        badTau = (last - first);
+        for (int i = 0; i < equationsCount; i++)
+            saveX1[i] = varX1[i];
         while (true)
         {
+            for (int i = 0; i < equationsCount; i++)
+            {
+                varX1[i] = saveX1[i];
+                varX2[i] = varX1[i];
+            }
+
             t = T;
 
             stepWithRungeKutta2Order(k1, k2, varX1, tmpX, tau, t);
@@ -331,7 +363,12 @@ int DifferentialEquationSolver::solveWithRungeKutta2Order()
             stepWithRungeKutta2Order(k1, k2, varX2, tmpX, tau / 2.0, t);
             stepWithRungeKutta2Order(k1, k2, varX2, tmpX, tau / 2.0, t);
 
-            if (calculateErrorNorm(varX1, varX2) < 10 - 2 || fabs(calculateErrorNorm(varX1, varX2) - norm) < 1e-8)
+            //cout << calculateErrorNorm(varX1, varX2, 2) << " " << t << " " << tau << endl;
+            //cout << varX1[0] << " " << varX1[1] << varX1[2] << " " << varX1[3] << endl;
+            //cout << varX2[0] << " " << varX2[1] << varX2[2] << " " << varX2[3] << endl;
+            //cin.get();
+
+            if (calculateErrorNorm(varX1, varX2, 2) < eps)
             {
                 tOutPoints.push_back(t);
                 xOutMatrix.push_back(MyVector(equationsCount));
@@ -339,39 +376,22 @@ int DifferentialEquationSolver::solveWithRungeKutta2Order()
                     xOutMatrix[xOutMatrix.size() - 1].array[i] = varX1[i];
                 t = T + tau;
 
-                if (calculateErrorNorm(varX1, varX2) < eps / 10.0 && tau * 2 < badTau / 1000.0)
+                if (calculateErrorNorm(varX1, varX2, 2) < eps)
                     tau *= 2;
 
                 break;
             }
             else
             {
-                xOutMatrix.clear();
-                tOutPoints.clear();
-                tOutPoints.push_back(first);
-                xOutMatrix.push_back(MyVector(equationsCount));
-
-                for (int i = 0; i < equationsCount; i++)
-                {
-                    xOutMatrix[xOutMatrix.size() - 1].array[i] = initialConditions[i];
-                    varX1[i] = varX2[i] = initialConditions[i];
-                }
-                badTau = tau;
-                tauStart /= 10.0;
-                tau = tauStart;
-                t = first;
-                cout << tau << endl;
-                cin.get();
-                break;
+                t = T;
+                tau /= 2.0;
             }
-            norm = calculateErrorNorm(varX1, varX2);
+            if (tau < 1e-20)
+            {
+                cout << "fatal error" << endl;
+                return 4000;
+            }
         };
-
-        if (tauStart < 1e-20)
-        {
-            cout << "fatal error" << endl;
-            return 4000;
-        }
     }
     outputFile();
     return 0;

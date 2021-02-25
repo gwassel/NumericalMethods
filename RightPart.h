@@ -56,6 +56,12 @@ public:
 
 private:
     double *initialConditions;
+    static void f1(double t, double *x, double *res)
+    {
+        res[0] = 2.0 * t;
+        res[1] = 3.0 * x[0];
+    };
+
     static void f2(double t, double *x, double *res)
     {
         res[0] = 2.0 * t;
@@ -63,12 +69,6 @@ private:
         res[2] = 4.0 * (x[1] + t * x[0] + t * t * t) / 3.0;
         res[3] = 5.0 * (x[2] + t * x[1] + t * t * x[0] + t * t * t * t) / 4.0;
     }
-
-    static void f1(double t, double *x, double *res)
-    {
-        res[0] = 2.0 * t;
-        res[1] = 3.0 * x[0];
-    };
 
     static void f3(double t, double *x, double *res)
     {

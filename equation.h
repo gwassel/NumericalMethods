@@ -21,15 +21,15 @@ private:
     double last;
     double first;
     double tauStart;
-    double eps = 1e-6;
+    double eps = 1e-2;
     int equationsCount;
-    int pointsNumber = 1000;
+    int pointsNumber = 10000;
     vector<double> tOutPoints;
     double *initialConditions;
     vector<MyVector> xOutMatrix;
     void (*f)(double, double *, double *);
 
-    double calculateErrorNorm(double *y1, double *y2);
+    double calculateErrorNorm(double *y1, double *y2, int p);
     void assignInitialValues(double*& varX1,double*& varX2);
     void stepWithRungeKutta2Order(double *k1, double *k2, double *varX, double *tmpX, double tau, double &t);
     void deleteMemory(double*& k1, double*& k2, double*& k3, double*& k4, double*& varX1, double*& varX2, double*& tmpX);
