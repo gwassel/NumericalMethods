@@ -1,4 +1,5 @@
 .vscode/*
+.nlohmann/*
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
