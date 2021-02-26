@@ -9,10 +9,10 @@ int DifferentialEquationSolver::solveWithRungeKutta(bool flag, int count, int po
 
     double *tmpX;
     double *varX1;
-    double *saveX1 = new double[equationsCount];
     double *varX2;
+    double *saveX1;
 
-    initializeMemory(k1, k2, k3, k4, varX1, varX2, tmpX);
+    initializeMemory(k1, k2, k3, k4, varX1, varX2, tmpX, saveX1);
 
     double T;
     double t = first;
@@ -27,13 +27,11 @@ int DifferentialEquationSolver::solveWithRungeKutta(bool flag, int count, int po
         T = t;
         for (int i = 0; i < equationsCount; i++)
             saveX1[i] = varX1[i];
+
         while (true)
         {
             for (int i = 0; i < equationsCount; i++)
-            {
-                varX1[i] = saveX1[i];
-                varX2[i] = varX1[i];
-            }
+                varX1[i] = varX2[i] = saveX1[i];
 
             t = T;
 
@@ -65,7 +63,6 @@ int DifferentialEquationSolver::solveWithRungeKutta(bool flag, int count, int po
                     if (tau > maxTau)
                         maxTau = tau;
                 }
-
                 break;
             }
             else
@@ -112,7 +109,8 @@ void DifferentialEquationSolver::deleteMemory(double *&k1, double *&k2, double *
     delete[] tmpX;
 }
 
-void DifferentialEquationSolver::initializeMemory(double *&k1, double *&k2, double *&k3, double *&k4, double *&varX1, double *&varX2, double *&tmpX)
+void DifferentialEquationSolver::initializeMemory(double *&k1, double *&k2, double *&k3, double *&k4, double *&varX1,
+                                                  double *&varX2, double *&tmpX, double *&saveX1)
 {
     varX1 = new double[equationsCount];
     varX2 = new double[equationsCount];
@@ -121,9 +119,29 @@ void DifferentialEquationSolver::initializeMemory(double *&k1, double *&k2, doub
     k2 = new double[equationsCount];
     k3 = new double[equationsCount];
     k4 = new double[equationsCount];
+    saveX1 = new double[equationsCount];
 }
 
 DifferentialEquationSolver::DifferentialEquationSolver(RightPart rp, int systemNum)
+{
+    setRightPart(rp, systemNum);
+}
+
+DifferentialEquationSolver::DifferentialEquationSolver()
+{
+    method = 0;
+    eps = 0.0;
+    first = 0.0;
+    last = 0.0;
+}
+
+DifferentialEquationSolver::~DifferentialEquationSolver()
+{
+    xOutMatrix.clear();
+    tOutPoints.clear();
+}
+
+void DifferentialEquationSolver::setRightPart(RightPart rp, int systemNum)
 {
     f = rp.getF(systemNum, equationsCount, initialConditions, first, last);
 }
@@ -147,11 +165,6 @@ void DifferentialEquationSolver::printResult()
 
 double DifferentialEquationSolver::calculateErrorNorm(double *y1, double *y2, int p)
 {
-    /*double sum = 0.0;
-    for (int i = 0; i < equationsCount; i++)
-        sum += (y2[i] - y1[i]) * ((y2[i] - y1[i]) / (225.0));
-    return sqrt(sum);*/
-
     int s, u;
     switch (p)
     {
@@ -164,11 +177,9 @@ double DifferentialEquationSolver::calculateErrorNorm(double *y1, double *y2, in
     }
 
     double max = fabs(y2[0] - y1[0]);
-    //cout << "max:" << max << endl;
     u = 0;
     for (int i = 1; i < equationsCount; i++)
     {
-        //cout << fabs((y2[i] - y1[i])) << endl;
         if (max < fabs((y2[i] - y1[i])))
         {
             max = fabs((y2[i] - y1[i]));
@@ -176,11 +187,6 @@ double DifferentialEquationSolver::calculateErrorNorm(double *y1, double *y2, in
         }
     }
     return max / s;
-
-    /*double sum = 0.0;
-    for (int i = 0; i < equationsCount; i++)
-        sum += fabs(y2[i] - y1[i]) / s;
-    return sum;*/
 }
 
 void DifferentialEquationSolver::stepWithRungeKutta(double *k1, double *k2, double *k3, double *k4, double *varX, double *tmpX,
@@ -421,8 +427,9 @@ double DifferentialEquationSolver::countApproximateRatio(double mtau, string fna
     double *tmpX;
     double *varX1;
     double *varX2;
+    double *saveX1;//not needed
 
-    initializeMemory(k1, k2, k3, k4, varX1, varX2, tmpX);
+    initializeMemory(k1, k2, k3, k4, varX1, varX2, tmpX,saveX1);
 
     double T;
     double maxErr;
@@ -470,4 +477,93 @@ double DifferentialEquationSolver::countApproximateRatio(double mtau, string fna
     deleteMemory(k1, k2, k3, k4, varX1, varX2, tmpX);
 
     return maxErr;
+}
+
+void DifferentialEquationSolver::setEps(double userEps)
+{
+    eps = userEps;
+}
+
+double DifferentialEquationSolver::getEps()
+{
+    return eps;
+}
+
+void DifferentialEquationSolver::setMethod(string userMethod)
+{
+    if (userMethod == "RK2")
+        method = 1;
+    if (userMethod == "RK4")
+        method = 2;
+    if (userMethod == "A")
+        method = 3;
+    if (userMethod == "PC")
+        method = 4;
+    if (userMethod == "SS")
+        method = 5;
+}
+
+string DifferentialEquationSolver::getMethod()
+{
+    switch (method)
+    {
+    case 1:
+        return "Runge Kutta 2 order";
+        break;
+    case 2:
+        return "Runge Kutta 4 order";
+        break;
+    case 3:
+        return "Adams";
+        break;
+    case 4:
+        return "Predictor-corrector";
+        break;
+    case 5:
+        return "Symetric schema";
+        break;
+    }
+}
+
+int DifferentialEquationSolver::solve()
+{
+    switch (method)
+    {
+    case 1:
+        solveWithRungeKutta();
+        break;
+    case 2:
+        solveWithRungeKutta2Order();
+        break;
+    case 3:
+        solveWithAdams();
+        break;
+    case 4:
+        solveWithPredictorCorrector();
+        break;
+    case 5:
+        //symmetric scheme;
+        break;
+    }
+    return 0;
+}
+
+void DifferentialEquationSolver::compareApproximateRatioAndAccuracyRatio()
+{
+    double err1 = countApproximateRatio(0.04, "1");
+    double err2 = countApproximateRatio(0.02, "2");
+    double err3 = countApproximateRatio(0.01, "3");
+    double err4 = countApproximateRatio(0.005, "4");
+    double err5 = countApproximateRatio(0.0025, "5");
+    cout << "Showing maximum errors in system with different tau" << endl;
+    cout << err1 << " " << err2 << " " << err3 << " " << err4 << " " << err5 << endl;
+    cout << "Showing approximate ratio" << endl;
+    cout << "P = " << (1.0 / log(0.5)) * log((err3 - err2) / (err2 - err1)) << endl;
+    cout << "P = " << (1.0 / log(0.5)) * log((err4 - err3) / (err3 - err2)) << endl;
+    cout << "P = " << (1.0 / log(0.5)) * log((err5 - err4) / (err4 - err3)) << endl;
+    cout << "Showing accuracy ratio" << endl;
+    cout << "P_N = " << log(err1 / err2) / log(2) << endl;
+    cout << "P_N = " << log(err2 / err3) / log(2) << endl;
+    cout << "P_N = " << log(err3 / err4) / log(2) << endl;
+    cout << "P_N = " << log(err4 / err5) / log(2) << endl;
 }

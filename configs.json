@@ -1,7 +1,5 @@
 {
-    "system_configs": {
-        "eps":1e-6,
-        "system":1,
-        "method":"RK"
-}
+    "eps": 1e-6,
+    "system": 1,
+    "method": "RK4"
 }

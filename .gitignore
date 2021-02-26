@@ -1,5 +1,9 @@
-$ cat .gitignore
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
 
-*.txt
-*.vscode
-
+# Local History for Visual Studio Code
+.history/

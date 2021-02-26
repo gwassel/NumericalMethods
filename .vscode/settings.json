@@ -5,6 +5,7 @@
         "algorithm": "cpp",
         "ostream": "cpp",
         "cmath": "cpp",
-        "complex": "cpp"
+        "complex": "cpp",
+        "string": "cpp"
     }
 }
