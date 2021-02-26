@@ -1,10 +1,11 @@
 #include "equation.h"
-int DifferentialEquationSolver::solveWithRungeKutta(bool flag, int count)
+int DifferentialEquationSolver::solveWithRungeKutta(bool flag, int count, int pointsNumber)
 {
     double *k1;
     double *k2;
     double *k3;
     double *k4;
+    double maxTau;
 
     double *tmpX;
     double *varX1;
@@ -14,11 +15,10 @@ int DifferentialEquationSolver::solveWithRungeKutta(bool flag, int count)
     initializeMemory(k1, k2, k3, k4, varX1, varX2, tmpX);
 
     double T;
-    double norm;
-    double badTau;
     double t = first;
     int readyPoints = 1;
-    double tau = tauStart;
+    double tau = (last - first) / (pointsNumber - 1);
+    maxTau = tau;
 
     assignInitialValues(varX1, varX2);
 
@@ -44,12 +44,6 @@ int DifferentialEquationSolver::solveWithRungeKutta(bool flag, int count)
             stepWithRungeKutta(k1, k2, k3, k4, varX2, tmpX, tau / 2.0, t);
             stepWithRungeKutta(k1, k2, k3, k4, varX2, tmpX, tau / 2.0, t);
 
-            //cout << calculateErrorNorm(varX1, varX2, 4) << " " << tau << endl;
-            //cout << varX1[0] << " " << varX1[1] << " " << varX1[2] << " " << varX1[3] << endl;
-            //cout << varX2[0] << " " << varX2[1] << " " << varX2[2] << " " << varX2[3] << endl;
-            //cin.get();
-            //cout << tau<< endl;
-
             if (calculateErrorNorm(varX1, varX2, 4) < eps)
             {
                 readyPoints++;
@@ -66,7 +60,11 @@ int DifferentialEquationSolver::solveWithRungeKutta(bool flag, int count)
                 }
 
                 if (calculateErrorNorm(varX1, varX2, 4) < eps)
+                {
                     tau *= 2;
+                    if (tau > maxTau)
+                        maxTau = tau;
+                }
 
                 break;
             }
@@ -74,7 +72,6 @@ int DifferentialEquationSolver::solveWithRungeKutta(bool flag, int count)
             {
                 t = T;
                 tau /= 2.0;
-                //break;
             }
             if (tau < 1e-20)
             {
@@ -86,6 +83,7 @@ int DifferentialEquationSolver::solveWithRungeKutta(bool flag, int count)
     }
     deleteMemory(k1, k2, k3, k4, varX1, varX2, tmpX);
     outputFile();
+    cout << "Max tau needed to achieve eps = " << eps << ", " << maxTau << endl;
     return 0;
 }
 
@@ -128,7 +126,6 @@ void DifferentialEquationSolver::initializeMemory(double *&k1, double *&k2, doub
 DifferentialEquationSolver::DifferentialEquationSolver(RightPart rp, int systemNum)
 {
     f = rp.getF(systemNum, equationsCount, initialConditions, first, last);
-    tauStart = (last - first) / (pointsNumber - 1);
 }
 
 void DifferentialEquationSolver::printResult()
@@ -316,7 +313,7 @@ int DifferentialEquationSolver::solveWithPredictorCorrector(int methodOrder, int
     return 0;
 }
 
-int DifferentialEquationSolver::solveWithRungeKutta2Order()
+int DifferentialEquationSolver::solveWithRungeKutta2Order(int pointsNumber)
 {
     double *varX1 = new double[equationsCount];
     double *saveX1 = new double[equationsCount];
@@ -327,8 +324,10 @@ int DifferentialEquationSolver::solveWithRungeKutta2Order()
     double *k2 = new double[equationsCount];
 
     double T;
+    double maxTau;
     double t = first;
-    double tau = tauStart;
+    double tau = (last - first) / (pointsNumber - 1);
+    maxTau = tau;
 
     tOutPoints.clear();
     xOutMatrix.clear();
@@ -363,11 +362,6 @@ int DifferentialEquationSolver::solveWithRungeKutta2Order()
             stepWithRungeKutta2Order(k1, k2, varX2, tmpX, tau / 2.0, t);
             stepWithRungeKutta2Order(k1, k2, varX2, tmpX, tau / 2.0, t);
 
-            //cout << calculateErrorNorm(varX1, varX2, 2) << " " << t << " " << tau << endl;
-            //cout << varX1[0] << " " << varX1[1] << varX1[2] << " " << varX1[3] << endl;
-            //cout << varX2[0] << " " << varX2[1] << varX2[2] << " " << varX2[3] << endl;
-            //cin.get();
-
             if (calculateErrorNorm(varX1, varX2, 2) < eps)
             {
                 tOutPoints.push_back(t);
@@ -377,7 +371,11 @@ int DifferentialEquationSolver::solveWithRungeKutta2Order()
                 t = T + tau;
 
                 if (calculateErrorNorm(varX1, varX2, 2) < eps)
+                {
                     tau *= 2;
+                    if (maxTau < tau)
+                        maxTau = tau;
+                }
 
                 break;
             }
@@ -394,6 +392,7 @@ int DifferentialEquationSolver::solveWithRungeKutta2Order()
         };
     }
     outputFile();
+    cout << "Max tau needed to achieve eps = " << eps << ", " << maxTau << endl;
     return 0;
 }
 
@@ -410,4 +409,65 @@ void DifferentialEquationSolver::stepWithRungeKutta2Order(double *k1, double *k2
 
     for (int j = 0; j < equationsCount; j++)
         varX[j] += tau * k2[j];
+}
+
+double DifferentialEquationSolver::countApproximateRatio(double mtau, string fname)
+{
+    double *k1;
+    double *k2;
+    double *k3;
+    double *k4;
+
+    double *tmpX;
+    double *varX1;
+    double *varX2;
+
+    initializeMemory(k1, k2, k3, k4, varX1, varX2, tmpX);
+
+    double T;
+    double maxErr;
+    double t = first;
+
+    assignInitialValues(varX1, varX2);
+
+    //one init step
+    T = t;
+    for (int i = 0; i < equationsCount; i++)
+        varX2[i] = varX1[i];
+
+    t = T;
+
+    stepWithRungeKutta(k1, k2, k3, k4, varX1, tmpX, mtau, t);
+
+    t = T;
+
+    stepWithRungeKutta(k1, k2, k3, k4, varX2, tmpX, mtau / 2.0, t);
+    stepWithRungeKutta(k1, k2, k3, k4, varX2, tmpX, mtau / 2.0, t);
+
+    t = T + mtau;
+    maxErr = calculateErrorNorm(varX1, varX2, 4);
+
+    //all other steps
+    while (t < last)
+    {
+        T = t;
+        for (int i = 0; i < equationsCount; i++)
+            varX2[i] = varX1[i];
+
+        t = T;
+
+        stepWithRungeKutta(k1, k2, k3, k4, varX1, tmpX, mtau, t);
+
+        t = T;
+
+        stepWithRungeKutta(k1, k2, k3, k4, varX2, tmpX, mtau / 2.0, t);
+        stepWithRungeKutta(k1, k2, k3, k4, varX2, tmpX, mtau / 2.0, t);
+
+        if (maxErr < calculateErrorNorm(varX1, varX2, 4))
+            maxErr = calculateErrorNorm(varX1, varX2, 4);
+        t = T + mtau;
+    }
+    deleteMemory(k1, k2, k3, k4, varX1, varX2, tmpX);
+
+    return maxErr;
 }
