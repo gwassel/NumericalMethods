@@ -574,7 +574,7 @@ int DifferentialEquationSolver::solve()
         solveWithExplicitEuler();
         break;
     case 6:
-        //неявный эйлер;
+        //backword euler
         break;
     }
     return 0;
