@@ -1,5 +1,5 @@
 #include "equation.h"
-int DifferentialEquationSolver::solveWithRungeKutta(bool flag, int count, int pointsNumber)
+int DifferentialEquationSolver::solveWithRungeKutta4Order(bool flag, int count)
 {
     double *k1;
     double *k2;
@@ -17,10 +17,11 @@ int DifferentialEquationSolver::solveWithRungeKutta(bool flag, int count, int po
     double T;
     double t = first;
     int readyPoints = 1;
-    double tau = (last - first) / (pointsNumber - 1);
+    double tau = (last - first) / (numberOfPoints - 1);
     maxTau = tau;
 
     assignInitialValues(varX1, varX2);
+    tauOnStep.push_back(tau);
 
     while (t < last)
     {
@@ -46,6 +47,7 @@ int DifferentialEquationSolver::solveWithRungeKutta(bool flag, int count, int po
             {
                 readyPoints++;
                 tOutPoints.push_back(t);
+                tauOnStep.push_back(tau);
                 xOutMatrix.push_back(MyVector(equationsCount));
                 for (int i = 0; i < equationsCount; i++)
                     xOutMatrix[xOutMatrix.size() - 1].array[i] = varX1[i];
@@ -86,6 +88,7 @@ int DifferentialEquationSolver::solveWithRungeKutta(bool flag, int count, int po
 
 void DifferentialEquationSolver::assignInitialValues(double *&varX1, double *&varX2)
 {
+    tauOnStep.clear();
     tOutPoints.clear();
     xOutMatrix.clear();
     tOutPoints.push_back(first);
@@ -133,6 +136,8 @@ DifferentialEquationSolver::DifferentialEquationSolver()
     eps = 0.0;
     first = 0.0;
     last = 0.0;
+    equationsCount = 0;
+    initialConditions = nullptr;
 }
 
 DifferentialEquationSolver::~DifferentialEquationSolver()
@@ -217,12 +222,12 @@ void DifferentialEquationSolver::stepWithRungeKutta(double *k1, double *k2, doub
         varX[j] += ONE_SIXTH * tau * (k1[j] + k2[j] + k2[j] + k3[j] + k3[j] + k4[j]);
 }
 
-int DifferentialEquationSolver::solveWithAdams(int methodOrder, int numberOfPointsAdams)
+int DifferentialEquationSolver::solveWithAdams(int methodOrder)
 {
-    solveWithRungeKutta(true);
+    solveWithRungeKutta4Order(true);
 
     double t = tOutPoints[tOutPoints.size() - 1];
-    double step = fabs(last - t) / numberOfPointsAdams;
+    double step = fabs(last - t) / numberOfPoints;
     double coef = step / 24.0;
 
     double C0 = 55.0;
@@ -234,7 +239,7 @@ int DifferentialEquationSolver::solveWithAdams(int methodOrder, int numberOfPoin
     for (int i = 0; i < methodOrder; i++)
         tmpf[i] = new double[equationsCount];
 
-    for (int i = 0; i < numberOfPointsAdams; i++)
+    for (int i = 0; i < numberOfPoints; i++)
     {
         t = t + step;
         tOutPoints.push_back(t);
@@ -252,6 +257,7 @@ int DifferentialEquationSolver::solveWithAdams(int methodOrder, int numberOfPoin
 
 void DifferentialEquationSolver::outputFile()
 {
+    cout << "Outputting file" << endl;
     ofstream fOut;
     string fileName;
 
@@ -268,15 +274,23 @@ void DifferentialEquationSolver::outputFile()
     fileName = "t.txt";
     fOut.open(fileName, ios::out);
 
-    for (int j = 0; j < xOutMatrix.size(); j++)
+    for (int j = 0; j < tOutPoints.size(); j++)
         fOut << tOutPoints[j] << endl;
+
+    fOut.close();
+
+    fileName = "tau.txt";
+    fOut.open(fileName, ios::out);
+
+    for (int j = 0; j < tauOnStep.size(); j++)
+        fOut << tauOnStep[j] << endl;
 
     fOut.close();
 }
 
-int DifferentialEquationSolver::solveWithPredictorCorrector(int methodOrder, int numberOfPoints)
+int DifferentialEquationSolver::solveWithPredictorCorrector(int methodOrder)
 {
-    solveWithRungeKutta(true);
+    solveWithRungeKutta4Order(true);
 
     double t = tOutPoints[tOutPoints.size() - 1];
     double step = fabs(last - t) / numberOfPoints;
@@ -319,7 +333,7 @@ int DifferentialEquationSolver::solveWithPredictorCorrector(int methodOrder, int
     return 0;
 }
 
-int DifferentialEquationSolver::solveWithRungeKutta2Order(int pointsNumber)
+int DifferentialEquationSolver::solveWithRungeKutta2Order()
 {
     double *varX1 = new double[equationsCount];
     double *saveX1 = new double[equationsCount];
@@ -332,7 +346,7 @@ int DifferentialEquationSolver::solveWithRungeKutta2Order(int pointsNumber)
     double T;
     double maxTau;
     double t = first;
-    double tau = (last - first) / (pointsNumber - 1);
+    double tau = (last - first) / (numberOfPoints - 1);
     maxTau = tau;
 
     tOutPoints.clear();
@@ -427,9 +441,9 @@ double DifferentialEquationSolver::countApproximateRatio(double mtau, string fna
     double *tmpX;
     double *varX1;
     double *varX2;
-    double *saveX1;//not needed
+    double *saveX1; //not needed
 
-    initializeMemory(k1, k2, k3, k4, varX1, varX2, tmpX,saveX1);
+    initializeMemory(k1, k2, k3, k4, varX1, varX2, tmpX, saveX1);
 
     double T;
     double maxErr;
@@ -499,8 +513,15 @@ void DifferentialEquationSolver::setMethod(string userMethod)
         method = 3;
     if (userMethod == "PC")
         method = 4;
-    if (userMethod == "SS")
+    if (userMethod == "EE")
         method = 5;
+    if (userMethod == "EB")
+        method = 6;
+}
+
+void DifferentialEquationSolver::setNumberOfPoints(int userNumberOfPoints)
+{
+    numberOfPoints = userNumberOfPoints;
 }
 
 string DifferentialEquationSolver::getMethod()
@@ -520,7 +541,10 @@ string DifferentialEquationSolver::getMethod()
         return "Predictor-corrector";
         break;
     case 5:
-        return "Symetric schema";
+        return "Euler explicit";
+        break;
+    case 6:
+        return "Euler backword";
         break;
     }
 }
@@ -530,19 +554,27 @@ int DifferentialEquationSolver::solve()
     switch (method)
     {
     case 1:
-        solveWithRungeKutta();
-        break;
-    case 2:
+        cout << "RK2" << endl;
         solveWithRungeKutta2Order();
         break;
+    case 2:
+        cout << "RK4" << endl;
+        solveWithRungeKutta4Order();
+        break;
     case 3:
+        cout << "A" << endl;
         solveWithAdams();
         break;
     case 4:
+        cout << "PD" << endl;
         solveWithPredictorCorrector();
         break;
     case 5:
-        //symmetric scheme;
+        cout << "EE" << endl;
+        solveWithExplicitEuler();
+        break;
+    case 6:
+        //неявный эйлер;
         break;
     }
     return 0;
@@ -566,4 +598,42 @@ void DifferentialEquationSolver::compareApproximateRatioAndAccuracyRatio()
     cout << "P_N = " << log(err2 / err3) / log(2) << endl;
     cout << "P_N = " << log(err3 / err4) / log(2) << endl;
     cout << "P_N = " << log(err4 / err5) / log(2) << endl;
+}
+
+void DifferentialEquationSolver::solveWithExplicitEuler()
+{
+    double t = first;
+    double tau = (last - first) / (numberOfPoints - 1);
+
+    xOutMatrix.clear();
+    tOutPoints.clear();
+
+    double *varX = new double[equationsCount];
+    double *tmpX = new double[equationsCount];
+
+    for (int i = 0; i < equationsCount; i++)
+        varX[i] = initialConditions[i];
+
+    xOutMatrix.push_back(MyVector(equationsCount));
+    tOutPoints.push_back(t);
+    for (int i = 0; i < equationsCount; i++)
+        xOutMatrix[xOutMatrix.size() - 1] = varX[i] + tau * tmpX[i];
+
+    while (t < last)
+    {
+        xOutMatrix.push_back(MyVector(equationsCount));
+        tOutPoints.push_back(t);
+
+        f(t, varX, tmpX);
+
+        for (int i = 0; i < equationsCount; i++)
+            xOutMatrix[xOutMatrix.size() - 1].array[i] = varX[i] + tau * tmpX[i];
+
+        for (int i = 0; i < equationsCount; i++)
+            varX[i] = xOutMatrix[xOutMatrix.size() - 1].array[i];
+
+        t += tau;
+    }
+
+    outputFile();
 }

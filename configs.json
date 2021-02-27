@@ -1,5 +1,6 @@
 {
-    "eps": 1e-6,
-    "system": 1,
-    "method": "RK4"
+    "eps": 1e-2,
+    "system": 5,
+    "method": "EE",
+    "points_number": 1000
 }

@@ -14,7 +14,7 @@ void readConfig(DifferentialEquationSolver &solver, RightPart &rp)
      solver.setEps(objJson["eps"]);
      solver.setMethod(objJson["method"]);
      solver.setRightPart(rp, objJson["system"]);
-     cout << objJson["eps"] << endl;
+     solver.setNumberOfPoints(objJson["points_number"]);
 }
 
 int main()
@@ -22,7 +22,7 @@ int main()
      RightPart rp;
      DifferentialEquationSolver solver;
      readConfig(solver, rp);
-     //solver.solve();
-     solver.compareApproximateRatioAndAccuracyRatio();
+     solver.solve();
+     //solver.compareApproximateRatioAndAccuracyRatio();
      return 0;
 }
