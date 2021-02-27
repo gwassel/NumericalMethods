@@ -1,12 +1,18 @@
-.vscode/*
-.nlohmann/*
+*.vscode/*
+*.nlohmann/*
+*.systemResultsRK4
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
 *.code-workspace
-*.txt
 
+#My files
+*.txt
+*MakeFile
+*.exe
+*meson.build
+*json.hpp
 # Local History for Visual Studio Code
 .history/
 # Prerequisites
