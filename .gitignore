@@ -1,6 +1,6 @@
 *.vscode/
-*.nlohmann/
-*.systemResultsRK4
+*nlohmann/
+*systemResultsRK4
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
